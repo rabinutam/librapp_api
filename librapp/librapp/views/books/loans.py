@@ -95,28 +95,13 @@ class BooksLoansViewSet(viewsets.ViewSet):
                 if lib_branch_id is not None:
                     lib_branch_id = int(lib_branch_id)
                     if lib_branch_id == loan.book.lib_branch.id:
-                        result.append(self._get_book_loan_data(loan))
+                        result.append(self.vh.get_loan_data(loan))
                 else:
-                    result.append(self._get_book_loan_data(loan))
+                    result.append(self.vh.get_loan_data(loan))
             return Response(result)
         except:
-            raise
             msg = 'Error getting book loan data for card_no: {0}.'.format(card_no)
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
-
-
-    @staticmethod
-    def _get_book_loan_data(loan):
-        book_copy = loan.book
-        loan_dict = {
-                'isbn': book_copy.isbn.isbn,
-                'lib_branch_id': book_copy.lib_branch.id,
-                'card_no': loan.card_no,
-                'date_out': loan.date_out,
-                'date_in': loan.date_in,
-                'due_date': loan.due_date,
-                }
-        return loan_dict
 
 
     def retrieve(self, request, pk=None):
@@ -174,12 +159,9 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
             book_copy = models.BookCopy.objects.get(isbn=isbn, lib_branch_id=lib_branch_id)
 
-            # Active loan count, ie no date_in set yet
-            b_loans = models.BookLoan.objects.filter(card_no=card_no, date_in=None)
-            loan_count = b_loans.count()
-
+            b_loans = models.BookLoan.objects.filter(card_no=card_no)
             # Check fine
-            if loan_count:
+            if b_loans:
                 for loan in b_loans:
                     try:
                         fine = models.Fine.objects.get(loan_id=loan.id)
@@ -190,6 +172,8 @@ class BooksLoansViewSet(viewsets.ViewSet):
                         pass # no problem
 
             # Check borrow limit (max 3 books)
+            # Active loan count, ie no date_in set yet
+            loan_count = models.BookLoan.objects.filter(card_no=card_no, date_in=None).count()
             if loan_count >= 3:
                 msg = 'Cannot borrow more that 3 books at a time'
                 return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)

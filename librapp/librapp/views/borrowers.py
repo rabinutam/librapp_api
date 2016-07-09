@@ -9,8 +9,8 @@ from librapp.lib.request_field import RequestField
 from librapp.lib.request_validator import RequestValidation, ValidationError
 
 
-class MembershipRequestsViewSet(viewsets.ViewSet):
-    '''API Endpoint to access membership requests
+class BorrowersViewSet(viewsets.ViewSet):
+    '''API Endpoint to access borrowers
 
     **API Endpoint**
     ::

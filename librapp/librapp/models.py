@@ -51,6 +51,6 @@ class BookLoan(models.Model):
 
 class Fine(models.Model):
     # id is assigned by default
-    loan = models.ForeignKey(BookLoan)
+    loan = models.ForeignKey(BookLoan, unique=True) # one fine entry per loan
     fine_amt = models.DecimalField(max_digits=6, decimal_places=2)
     paid = models.BooleanField(default=False)
