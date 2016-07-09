@@ -1,0 +1,4 @@
+*.pyc
+*.rst
+*.bat
+*.doctree

@@ -34,12 +34,12 @@ class BookCopy(models.Model):
 class Borrower(models.Model):
     #card_no = models.AutoField(primary_key=True)
     card_no = models.IntegerField(primary_key=True)
-    ssn = models.CharField(max_length=9)
+    ssn = models.CharField(max_length=9, unique=True)
     fname = models.CharField(max_length=50)
     lname = models.CharField(max_length=50)
     address = models.CharField(max_length=100)
-    phone = models.CharField(max_length=15)
-    email = models.EmailField(max_length=100)
+    phone = models.CharField(max_length=15, null=True)
+    email = models.EmailField(max_length=100, null=True)
 
 class BookLoan(models.Model):
     # id = loan_id is assigned by default

@@ -168,6 +168,16 @@ class RequestValidation(object):
         if re.match(r'.*@\w*\.\w*$', data) is None:
             msg = '{0}: {1} is in invalid format.'.format(field.name, data)
             raise ValidationError(msg, self._get_http_code(400))
+
+    def _ssn_does_not_exist(self, field):
+        data = self._get_data(field)
+        try:
+            models.Borrower.objects.get(ssn=data)
+        except models.Borrower.DoesNotExist:
+            pass
+        else:
+            msg = 'Borrower with {0}: {1} already exists.'.format(field.name, data)
+            raise ValidationError(msg, self._get_http_code(400))
  
     def _is_valid_utd_email(self, field):
         data = self._get_data(field)
