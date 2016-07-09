@@ -141,7 +141,9 @@ def setup_init_db():
         # Book Copies
         print 'Populating Book Copy'
         populate_book_copy()
+        print 'Done'
     except Exception as e:
+        print 'Error'
         print e
 
 

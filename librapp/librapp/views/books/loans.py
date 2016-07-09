@@ -11,14 +11,16 @@ from librapp.lib.views_helper import ViewsHelper
 from librapp.utils.date_utils import DateUtils
 
 
-class CheckingViewSet(viewsets.ViewSet):
-    '''API Endpoint to access events
+class BooksLoansViewSet(viewsets.ViewSet):
+    '''API Endpoint to access book loans
 
     **API Endpoint**
     ::
-        http://foo.com/books/checking/
+        http://foo.com/books/loans/
 
     **Methods:**
+        - retrieve
+        - list
         - create
         - update
         - delete
@@ -37,33 +39,36 @@ class CheckingViewSet(viewsets.ViewSet):
 
 
     def list(self, request):
-        '''Responses with a list of 
+        '''Responses with a list of book loans
 
         **Usage**
         ::
-            GET http://foo.com/books/checking/
+            GET http://foo.com/books/loans/
 
         **Query Parameters**
 
         ================== =========== ========== =============================
         name               Type        Required   Description
         ================== =========== ========== =============================
-        organization_id    integer     No         organization ID
-        my_events          bool        No         lists User's RSVPed events
+        card_no            integer     No         borrower card_no
+        lib_branch_id      integer     No         library branch id
+        active             bool        No         true for active loan only
         ================== =========== ========== =============================
 
         **Sample Request**
         ::
-            GET http://foo.com/books/checking/
+            GET http://foo.com/books/loans/?card_no=1
 
         **Sample Response**
         ::
             {}
         '''
-        msg = 'Method Not Allowed'
-        return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-        fields = []
+        fields = [
+                RequestField(name='card_no', required=False, query_param=True, types=(int, str, unicode), checks=[]),
+                RequestField(name='lib_branch_id', required=False, query_param=True, types=(int,), checks=[]),
+                RequestField(name='active', required=False, query_param=True, types=(bool,), checks=[]),
+                ]
         checks = []
 
         try:
@@ -72,11 +77,46 @@ class CheckingViewSet(viewsets.ViewSet):
             return Response({'msg': e.message}, status=e.status)
 
         try:
-            data = []
-            return Response({'data': data})
+            loan_filter = {}
+
+            card_no = request.query_params.get('card_no')
+            if card_no is not None:
+                loan_filter['card_no'] = int(card_no)
+
+            active = request.query_params.get('active', '')
+            if active.lower() in ['true', '1']:
+                loan_filter['date_in'] = None
+
+            b_loans = models.BookLoan.objects.filter(**loan_filter)
+
+            lib_branch_id = request.query_params.get('lib_branch_id')
+            result = []
+            for loan in b_loans:
+                if lib_branch_id is not None:
+                    lib_branch_id = int(lib_branch_id)
+                    if lib_branch_id == loan.book.lib_branch.id:
+                        result.append(self._get_book_loan_data(loan))
+                else:
+                    result.append(self._get_book_loan_data(loan))
+            return Response(result)
         except:
-            msg = 'Error getting data.'
+            raise
+            msg = 'Error getting book loan data for card_no: {0}.'.format(card_no)
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    @staticmethod
+    def _get_book_loan_data(loan):
+        book_copy = loan.book
+        loan_dict = {
+                'isbn': book_copy.isbn.isbn,
+                'lib_branch_id': book_copy.lib_branch.id,
+                'card_no': loan.card_no,
+                'date_out': loan.date_out,
+                'date_in': loan.date_in,
+                'due_date': loan.due_date,
+                }
+        return loan_dict
 
 
     def retrieve(self, request, pk=None):
@@ -134,7 +174,8 @@ class CheckingViewSet(viewsets.ViewSet):
 
             book_copy = models.BookCopy.objects.get(isbn=isbn, lib_branch_id=lib_branch_id)
 
-            b_loans = models.BookLoan.objects.filter(card_no=card_no)
+            # Active loan count, ie no date_in set yet
+            b_loans = models.BookLoan.objects.filter(card_no=card_no, date_in=None)
             loan_count = b_loans.count()
 
             # Check fine
@@ -172,4 +213,56 @@ class CheckingViewSet(viewsets.ViewSet):
             return Response(book_loan_obj.values())
         except:
             msg = 'Could not create Loan Entry'
+            return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    def update(self, request, pk=None):
+        '''Updates book loan from checkout to checkin for the book loan ID
+
+        **Usage**
+        ::
+            PUT http://foo.com/books/checking/<book loan ID>/
+
+        **Request body**
+
+        ================== =========== ========== =============================
+        name               Type        Required   Description
+        ================== =========== ========== =============================
+        ================== =========== ========== =============================
+
+        **Sample Request**
+        ::
+            {
+            }
+
+        **Sample Response**
+        ::
+            {}
+        '''
+
+        fields = [
+                RequestField(name='pk', required=True, is_pk=True, types=(int,), checks=[]),
+                ]
+        checks = []
+
+        try:
+            vres = RequestValidation(request=request, checks=checks, fields=fields)
+        except ValidationError as e:
+            return Response({'msg': e.message}, status=e.status)
+
+        try:
+            b_loan = models.BookLoan.objects.get(id=pk)
+
+            # Available copies increases by 1 upon checkin
+            book_copy = b_loan.book
+            book_copy.no_of_copies += 1
+            book_copy.save()
+
+            # Save date in
+            b_loan.date_in = datetime.now()
+            b_loan.save()
+
+            return Response(b_loan.values())
+        except:
+            msg = 'Could not update Loan Entry'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)

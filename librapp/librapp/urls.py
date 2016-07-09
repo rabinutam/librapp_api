@@ -21,12 +21,12 @@ from rest_framework import routers
 
 from views import search
 from views.auth import login
-from views.books import checking
+from views.books import loans
 
 router = routers.DefaultRouter()
 router.register(r'auth/login', login.LoginViewSet, base_name='login')
 router.register(r'search', search.SearchViewSet, base_name='search')
-router.register(r'books/checking', checking.CheckingViewSet, base_name='checking')
+router.register(r'books/loans', loans.BooksLoansViewSet, base_name='books_loans')
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
