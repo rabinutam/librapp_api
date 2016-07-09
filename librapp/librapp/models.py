@@ -49,8 +49,12 @@ class BookLoan(models.Model):
     due_date = models.DateTimeField() # 14 days from date_out
     date_in = models.DateTimeField(null=True)
 
+    class Meta:
+        # one borrower can borrow that book only once
+        unique_together = ('book', 'card_no')
+
 class Fine(models.Model):
     # id is assigned by default
-    loan = models.ForeignKey(BookLoan, unique=True) # one fine entry per loan
+    loan = models.OneToOneField(BookLoan, unique=True) # same as ForeignKey, unique=True
     fine_amt = models.DecimalField(max_digits=6, decimal_places=2)
     paid = models.BooleanField(default=False)

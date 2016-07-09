@@ -104,13 +104,15 @@ class BooksLoansViewSet(viewsets.ViewSet):
                         result.append(self.vh.get_loan_data(loan))
                 else:
                     result.append(self.vh.get_loan_data(loan))
-            return Response(result)
+            return Response({'books_loans': result})
         except:
             msg = 'Error getting book loan data for card_no: {0}.'.format(card_no)
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
 
     def retrieve(self, request, pk=None):
+        '''Method Not Allowed'''
+
         msg = 'Method Not Allowed'
         return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -120,7 +122,7 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
         **Usage**
         ::
-            POST http://foo.com/books/checking/
+            POST http://foo.com/books/loans/
 
         **Request body**
 
@@ -146,9 +148,9 @@ class BooksLoansViewSet(viewsets.ViewSet):
         '''
 
         fields = [
-                RequestField(name='lib_branch_id', required=True, types=(int), checks=[]),
+                RequestField(name='lib_branch_id', required=True, types=(int,), checks=[]),
                 RequestField(name='isbn', required=True, types=(str, unicode), checks=[]),
-                RequestField(name='card_no', required=True, types=(int), checks=[]),
+                RequestField(name='card_no', required=True, types=(int,), checks=[]),
                 ]
         checks = []
 
@@ -163,7 +165,19 @@ class BooksLoansViewSet(viewsets.ViewSet):
             isbn = request.data.get('isbn')
             card_no = request.data.get('card_no')
 
+            # book copy in that library
             book_copy = models.BookCopy.objects.get(isbn=isbn, lib_branch_id=lib_branch_id)
+
+            # Check if active loan for the book_copy (book in the library) already exists
+            try:
+                existing_loan = models.BookLoan.objects.get(card_no=card_no, book_id=book_copy.id)
+                if existing_loan.date_in is None:
+                    msg = 'Cannot loan the same book twice'
+                    return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
+            except models.BookLoan.DoesNotExist:
+                pass
+            except:
+                raise
 
             b_loans = models.BookLoan.objects.filter(card_no=card_no)
             # Check fine
@@ -191,8 +205,8 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
             # create a new record in book loan table
             book_loan_row = {
-                    'book': book_copy.id,
-                    'card_no': card_no,
+                    'book_id': book_copy.id,
+                    'card_no_id': card_no,
                     'due_date': datetime.now() + timedelta(14)
                     }
             book_loan_obj = models.BookLoan.objects.create(**book_loan_row)
@@ -200,7 +214,13 @@ class BooksLoansViewSet(viewsets.ViewSet):
             # update available copies
             book_copy.no_of_copies -= 1
             book_copy.save()
-            return Response(book_loan_obj.values())
+            response_data = {
+                    'id': book_loan_obj.id,
+                    'book_copy_id': book_loan_obj.book_id,
+                    'card_no': book_loan_obj.card_no.card_no,
+                    'isbn': book_loan_obj.book.isbn.isbn,
+                    }
+            return Response(response_data)
         except:
             msg = 'Could not create Loan Entry'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
@@ -211,7 +231,7 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
         **Usage**
         ::
-            PUT http://foo.com/books/checking/<book loan ID>/
+            PUT http://foo.com/books/loans/<book loan ID>/
 
         **Request body**
 

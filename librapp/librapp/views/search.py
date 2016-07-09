@@ -47,21 +47,50 @@ class SearchViewSet(viewsets.ViewSet):
         ================== =========== ========== =============================
         name               Type        Required   Description
         ================== =========== ========== =============================
-        q                  string      Yes        Search string, min length: 4
+        q                  string      Yes        Search string, min length: 4, for search by ISBN provide full ISBN
         lib_branch_id      integer     No         library branch id
         ================== =========== ========== =============================
 
         **Sample Request**
         ::
-            GET http://foo.com/search/?q=spring/
+            http://foo.com/search/?q=rich+and&lib_branch_id=1
 
         **Sample Response**
         ::
             {
+                "count": 2,
                 "books": [
                     {
+                        "isbn": "0380699710",
+                        "title": "The Rich And The Mighty",
+                        "cover": "http://www.openisbn.com/cover/0380699710_72.jpg",
+                        "authors": [
+                            "Vera Cowie"
+                        ],
+                        "availability": [
+                            {
+                                "lib_branch_id": 1,
+                                "no_of_copies": 1,
+                                "id": 246431,
+                                "isbn_id": "0380699710"
+                            }
+                        ]
                     },
                     {
+                        "isbn": "0553273280",
+                        "title": "Rich And Reckless",
+                        "cover": "http://www.openisbn.com/cover/0553273280_72.jpg",
+                        "authors": [
+                            "Barney Leason"
+                        ],
+                        "availability": [
+                            {
+                                "lib_branch_id": 1,
+                                "no_of_copies": 1,
+                                "id": 177796,
+                                "isbn_id": "0553273280"
+                            }
+                        ]
                     }
                 ]
             }
@@ -95,17 +124,19 @@ class SearchViewSet(viewsets.ViewSet):
         try:
             # Searches against ISBN, Title, Author's name.
             books = models.Book.objects.filter(isbn=query)
+            # this happens by default: query = query.replace('+', ' ')
             if not books:
                 # Filter Can have only one __icontains
                 book_filter = {'title__icontains': query}
                 books1 = models.Book.objects.filter(**book_filter)
                 author_filter = {'name__icontains': query}
                 authors = models.Author.objects.filter(**author_filter)
+                books2 = []
                 if authors:
                     author_ids = [_.id for _ in authors]
                     author_book = models.BookAuthors.objects.filter(author_id__in=author_ids)
                     books2 = [_.isbn for _ in author_book]
-                    books = list(chain(books1, books2))
+                books = list(chain(books1, books2))
             books_data = self._get_books_data(books, lib_branch_id=lib_branch_id)
             result = {
                 'books': books_data,
