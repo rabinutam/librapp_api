@@ -82,15 +82,26 @@ class FinesViewSet(viewsets.ViewSet):
             b_loans = models.BookLoan.objects.filter(**loan_filter)
 
             lib_branch_id = request.query_params.get('lib_branch_id')
-            fine_type = request.query_params.get('fine_type', 'both')
+            fine_type = request.query_params.get('fine_type', 'both').lower()
             result = []
             for loan in b_loans:
+                append = False
                 if lib_branch_id is not None:
                     lib_branch_id = int(lib_branch_id)
                     if lib_branch_id == loan.book.lib_branch.id:
-                        result.append(self.vh.get_loan_data(loan, fine_type=fine_type))
+                        append = True
                 else:
-                    result.append(self.vh.get_loan_data(loan, fine_type=fine_type))
+                    append = True
+
+                loan_data = self.vh.get_loan_data(loan)
+                if fine_type == "paid":
+                    if loan_data['fine']['paid'] is False:
+                        append = False
+                elif fine_type == "unpaid":
+                    if loan_data['fine']['paid'] is True:
+                        append = False
+                if append:
+                    result.append(loan_data)
             return Response(result)
         except:
             msg = 'Error getting book loan data for card_no: {0}.'.format(card_no)
@@ -140,30 +151,37 @@ class FinesViewSet(viewsets.ViewSet):
 
         fields = [
                 RequestField(name='pk', required=True, is_pk=True, types=(int,), checks=[]),
-                RequestField(name='paid_amt', required=True, is_pk=True, types=(int, float), checks=['is_valid_amount']),
+                RequestField(name='paid_amt', required=True, types=(int, float), checks=['is_valid_amount']),
                 ]
         checks = []
 
         try:
-            vres = RequestValidation(request=request, checks=checks, fields=fields)
+            vres = RequestValidation(request=request, checks=checks, fields=fields, pk=pk)
         except ValidationError as e:
             return Response({'msg': e.message}, status=e.status)
 
         try:
             fine = models.Fine.objects.get(id=pk)
-            new_fine = fine.fine_amt - paid_amd
+            paid_amt = float(request.data.get('paid_amt', 0))
+            fine_amt = float(fine.fine_amt) # convert from decimal
+            new_fine = fine_amt - paid_amt
             change = 0
             if new_fine < 0:
-                change = paid_amt - fine.fine_amt
+                change = paid_amt - fine_amt
                 new_fine = 0
             if new_fine == 0:
                 fine.paid = True
             fine.fine_amt = new_fine
             fine.save()
 
-            resp_data = fine.values()
+            resp_data = {
+                    'id': fine.id,
+                    'fine_amt': fine.fine_amt,
+                    'paid': fine.paid
+                    }
             resp_data['change'] = change
             return Response(resp_data)
         except:
+            raise
             msg = 'Could not update Loan Entry'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)

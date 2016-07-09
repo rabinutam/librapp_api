@@ -4,7 +4,7 @@ from librapp import models
 class ViewsHelper(object):
 
     @staticmethod
-    def get_loan_data(loan, fine_type='both'):
+    def get_loan_data(loan):
         book_copy = loan.book
         date_in = loan.date_in
         if date_in is not None:
@@ -41,11 +41,13 @@ class ViewsHelper(object):
             fine_filter = {'loan_id': loan.id}
             fine = models.Fine.objects.get(**fine_filter)
             loan_data['fine'] = {
-                    'amount': fine.fine_amt,
+                    'id': fine.id,
+                    'fine_amt': fine.fine_amt,
                     'paid': fine.paid
                     }
         except:
             loan_data['fine'] = {
+                    'id': 0,
                     'amount': 0,
                     'paid': 'NA'
                     }

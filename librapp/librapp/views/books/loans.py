@@ -98,15 +98,18 @@ class BooksLoansViewSet(viewsets.ViewSet):
             lib_branch_id = request.query_params.get('lib_branch_id')
             result = []
             for loan in b_loans:
+                append = False
                 if lib_branch_id is not None:
                     lib_branch_id = int(lib_branch_id)
                     if lib_branch_id == loan.book.lib_branch.id:
-                        result.append(self.vh.get_loan_data(loan))
+                        append = True
                 else:
-                    result.append(self.vh.get_loan_data(loan))
+                    append = True
+                if append:
+                    loan_data = self.vh.get_loan_data(loan)
+                    result.append(loan_data)
             return Response({'books_loans': result})
         except:
-            raise
             msg = 'Error getting book loan data for card_no: {0}.'.format(card_no)
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
