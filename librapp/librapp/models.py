@@ -32,8 +32,7 @@ class BookCopy(models.Model):
     no_of_copies = models.IntegerField(default=0)
 
 class Borrower(models.Model):
-    #card_no = models.AutoField(primary_key=True)
-    card_no = models.IntegerField(primary_key=True)
+    card_no = models.AutoField(primary_key=True)
     ssn = models.CharField(max_length=9, unique=True)
     fname = models.CharField(max_length=50)
     lname = models.CharField(max_length=50)

@@ -33,7 +33,8 @@ class BorrowersViewSet(viewsets.ViewSet):
 
     rbac = RBAC()
 
-    def _get_response_data(self, db_obj=None):
+    @staticmethod
+    def _get_response_data(db_obj=None):
         response_data = {
                 }
         return response_data
@@ -41,6 +42,7 @@ class BorrowersViewSet(viewsets.ViewSet):
 
     def list(self, request):
         '''Method Not Allowed'''
+
         msg = 'Method Not Allowed'
         return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -129,9 +131,9 @@ class BorrowersViewSet(viewsets.ViewSet):
         **Sample Request body**
         ::
             {
-                "first_name": "Robi"
-                "last_name": "Bobi"
-                "ssn": "123456789"
+                "first_name": "Robi",
+                "last_name": "Bobi",
+                "ssn": "123456789",
                 "address": "123 showmethe way"
             }
 
@@ -169,14 +171,20 @@ class BorrowersViewSet(viewsets.ViewSet):
             email = request.data.get('email')
             if email is not None:
                 row['email'] = email
-            borrower = models.Borrowers.objects.create(**row)
-            return Response(borrower.values())
+            borrower = models.Borrower.objects.create(**row)
+            response_data = {
+                    'card_no': borrower.card_no,
+                    'fname': borrower.fname,
+                    'lname': borrower.lname
+                    }
+            return Response(response_data)
         except:
             msg = 'Could not create new Borrower'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, pk=None):
         '''Method Not Allowed'''
+
         msg = 'Method Not Allowed'
         return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
@@ -234,6 +242,13 @@ class BorrowersViewSet(viewsets.ViewSet):
 
 
     def destroy(self, request, pk=None):
+        '''Method Not Allowed
+        '''
+
+        msg = 'Method Not Allowed'
+        return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def xdestroy(self, request, pk=None):
         '''Deletes memberships request for the given ID.
         Only Org Admin can delete Org's Membership Requests.
 
@@ -261,7 +276,7 @@ class BorrowersViewSet(viewsets.ViewSet):
 
         try:
             req = models.Borrower.objects.get(id=pk)
-            # TODO delete dependencies (cascade)
+            # TODO delete dependencies (cascade to Loan and Fine)
             req.delete()
             return Response()
         except models.Borrower.DoesNotExist:
