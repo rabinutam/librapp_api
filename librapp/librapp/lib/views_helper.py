@@ -10,6 +10,7 @@ class ViewsHelper(object):
         if date_in is not None:
             date_in = date_in.isoformat()
         loan_data = {
+            'id': loan.id,
             'isbn': book_copy.isbn.isbn,
             'lib_branch_id': book_copy.lib_branch.id,
             'card_no': loan.card_no.card_no,

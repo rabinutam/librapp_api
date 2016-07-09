@@ -255,23 +255,34 @@ class BooksLoansViewSet(viewsets.ViewSet):
         checks = []
 
         try:
-            vres = RequestValidation(request=request, checks=checks, fields=fields)
+            vres = RequestValidation(request=request, checks=checks, fields=fields, pk=pk)
         except ValidationError as e:
             return Response({'msg': e.message}, status=e.status)
 
         try:
-            b_loan = models.BookLoan.objects.get(id=pk)
+            book_loan_obj = models.BookLoan.objects.get(id=pk)
+
+            # Check: no check in twice
+            if book_loan_obj.date_in is not None:
+                msg = 'Book is already checked in.'
+                return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
             # Available copies increases by 1 upon checkin
-            book_copy = b_loan.book
+            book_copy = book_loan_obj.book
             book_copy.no_of_copies += 1
             book_copy.save()
 
             # Save date in
-            b_loan.date_in = datetime.now()
-            b_loan.save()
+            book_loan_obj.date_in = datetime.now()
+            book_loan_obj.save()
 
-            return Response(b_loan.values())
+            response_data = {
+                    'id': book_loan_obj.id,
+                    'book_copy_id': book_loan_obj.book_id,
+                    'card_no': book_loan_obj.card_no.card_no,
+                    'isbn': book_loan_obj.book.isbn.isbn,
+                    }
+            return Response(response_data)
         except:
             msg = 'Could not update Loan Entry'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)

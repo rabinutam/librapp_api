@@ -236,7 +236,6 @@ class RequestValidation(object):
     def _is_admin(self, field):
         pass
 
-
     ######## Search Validation ########
     def _check_search_string(self, field):
         data = self._get_data(field)
