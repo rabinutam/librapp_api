@@ -5,12 +5,12 @@ Usage Note:
        $ make html
 
 Usage option 1:
-    $ cd funedapp/docs
+    $ cd librapp/docs
     $ python rst_creator.py
 
 Usage option 2:
     $ python manage.py shell
-    >>> from funedapp.docs.rst_creator import create_rst
+    >>> from librapp.docs.rst_creator import create_rst
     >>> create_rst()
 '''
 
@@ -23,12 +23,12 @@ import sys
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(BASE_DIR)
 
-# funedapp settings
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "funedapp.settings")
+# librapp settings
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "librapp.settings")
 django.setup()
 
 # do this after settings
-from funedapp.urls import router
+from librapp.urls import router
 
 class Formatter(object):
     def format_title(self, title='', level=1):
@@ -72,7 +72,7 @@ class RstCreator(object):
     def _create_index_files(self):
         filename = 'index.rst'
 
-        title = self.rf.format_title(title='funed API EndPoints')
+        title = self.rf.format_title(title='Database Design Project:: librapp API EndPoints')
         toc_tree = self.rf.get_toc_tree()
         header = [title, toc_tree]
 

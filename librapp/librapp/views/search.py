@@ -113,11 +113,11 @@ class SearchViewSet(viewsets.ViewSet):
                 }
             return Response(result)
         except:
-            raise
             msg = 'Error getting Books.'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
-    def _get_books_data(self, db_objs, lib_branch_id=0):
+    @staticmethod
+    def _get_books_data(db_objs, lib_branch_id=0):
         books_data = []
         for book in db_objs:
             booki = {

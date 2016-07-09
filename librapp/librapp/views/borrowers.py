@@ -40,7 +40,12 @@ class BorrowersViewSet(viewsets.ViewSet):
 
 
     def list(self, request):
-        '''Responses with a list of 
+        '''Method Not Allowed'''
+        msg = 'Method Not Allowed'
+        return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def xlist(self, request):
+        '''Responses with a list of borrowers
 
         **Usage**
         ::
@@ -170,8 +175,12 @@ class BorrowersViewSet(viewsets.ViewSet):
             msg = 'Could not create new Borrower'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
-
     def update(self, request, pk=None):
+        '''Method Not Allowed'''
+        msg = 'Method Not Allowed'
+        return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    def xupdate(self, request, pk=None):
         '''Update
 
         **Usage**
@@ -183,13 +192,11 @@ class BorrowersViewSet(viewsets.ViewSet):
         ================== =========== ========== =============================
         name               Type        Required   Description
         ================== =========== ========== =============================
-        state              string      Yes        options: approved, denied
         ================== =========== ========== =============================
 
         **Sample Request body**
         ::
             {
-                "update": "approved"
             }
 
         **Sample Response**

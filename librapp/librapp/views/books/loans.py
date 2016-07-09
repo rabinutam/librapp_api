@@ -222,8 +222,7 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
         **Sample Request**
         ::
-            {
-            }
+            {}
 
         **Sample Response**
         ::
