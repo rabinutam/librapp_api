@@ -106,19 +106,21 @@ class BooksLoansViewSet(viewsets.ViewSet):
                     result.append(self.vh.get_loan_data(loan))
             return Response({'books_loans': result})
         except:
+            raise
             msg = 'Error getting book loan data for card_no: {0}.'.format(card_no)
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
 
     def retrieve(self, request, pk=None):
-        '''Method Not Allowed'''
+        '''Method Not Allowed
+        '''
 
         msg = 'Method Not Allowed'
         return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
     def create(self, request):
-        '''Creates a Book check in entry
+        '''Creates a Book check out entry, ie checkout book
 
         **Usage**
         ::

@@ -29,20 +29,17 @@ class ViewsHelper(object):
             fine_amt = timediff.days * daily_fine
             fine_row = {'loan_id': loan.id}
             try:
-                fine_obj = models.Fine.object.get(**fine_row)
+                fine_obj = models.Fine.objects.get(**fine_row)
                 fine_obj.fine_amt = fine_amt
                 fine_obj.save()
             except:
                 fine_row['fine_amt'] = fine_amt
-                models.Fine.object.create(**fine_row)
+                fine_obj = models.Fine.objects.create(**fine_row)
 
         try:
+            # need to get fine again, as some fines may not exist, and need to get $0
             fine_filter = {'loan_id': loan.id}
-            if fine_type.lower() == 'paid':
-                fine_filter = {'paid': True}
-            elif fine_type.lower() == 'unpaid':
-                fine_filter = {'paid': False}
-            fine = models.Fine.object.get(**fine_filter)
+            fine = models.Fine.objects.get(**fine_filter)
             loan_data['fine'] = {
                     'amount': fine.fine_amt,
                     'paid': fine.paid

@@ -41,7 +41,8 @@ class BorrowersViewSet(viewsets.ViewSet):
 
 
     def list(self, request):
-        '''Method Not Allowed'''
+        '''Method Not Allowed
+        '''
 
         msg = 'Method Not Allowed'
         return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
@@ -183,7 +184,8 @@ class BorrowersViewSet(viewsets.ViewSet):
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
     def update(self, request, pk=None):
-        '''Method Not Allowed'''
+        '''Method Not Allowed
+        '''
 
         msg = 'Method Not Allowed'
         return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
