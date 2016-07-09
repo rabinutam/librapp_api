@@ -201,7 +201,7 @@ class FinesViewSet(viewsets.ViewSet):
 
         **Usage**
         ::
-            PUT http://foo.com/books/fines/<book loan ID>/
+            PUT http://foo.com/books/fines/<fines ID>/
 
         **Request body**
 
@@ -223,6 +223,7 @@ class FinesViewSet(viewsets.ViewSet):
 
         fields = [
                 RequestField(name='pk', required=True, is_pk=True, types=(int,), checks=[]),
+                RequestField(name='paid_amt', required=True, is_pk=True, types=(int, float), checks=['is_valid_amount']),
                 ]
         checks = []
 
@@ -232,18 +233,20 @@ class FinesViewSet(viewsets.ViewSet):
             return Response({'msg': e.message}, status=e.status)
 
         try:
-            b_loan = models.BookLoan.objects.get(id=pk)
+            fine = models.Fine.objects.get(id=pk)
+            new_fine = fine.fine_amt - paid_amd
+            change = 0
+            if new_fine < 0:
+                change = paid_amt - fine.fine_amt
+                new_fine = 0
+            if new_fine == 0:
+                fine.paid = True
+            fine.fine_amt = new_fine
+            fine.save()
 
-            # Available copies increases by 1 upon checkin
-            book_copy = b_loan.book
-            book_copy.no_of_copies += 1
-            book_copy.save()
-
-            # Save date in
-            b_loan.date_in = datetime.now()
-            b_loan.save()
-
-            return Response(b_loan.values())
+            resp_data = fine.values()
+            resp_data['change'] = change
+            return Response(resp_data)
         except:
             msg = 'Could not update Loan Entry'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)

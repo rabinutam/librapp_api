@@ -168,6 +168,18 @@ class RequestValidation(object):
         if re.match(r'.*@\w*\.\w*$', data) is None:
             msg = '{0}: {1} is in invalid format.'.format(field.name, data)
             raise ValidationError(msg, self._get_http_code(400))
+ 
+    def _is_valid_utd_email(self, field):
+        data = self._get_data(field)
+        if re.match(r'.*@utdallas.edu', data) is None:
+            msg = 'UTD {0}: {1} is in invalid format.'.format(field.name, data)
+            raise ValidationError(msg, self._get_http_code(400))
+
+    def _is_valid_amount(self, field):
+        data = float(self._get_data(field))
+        if float < 0:
+            msg = '{0}: {1} is negative and not valid.'.format(field.name, data)
+            raise ValidationError(msg, self._get_http_code(400))
 
     def _ssn_does_not_exist(self, field):
         data = self._get_data(field)
@@ -177,12 +189,6 @@ class RequestValidation(object):
             pass
         else:
             msg = 'Borrower with {0}: {1} already exists.'.format(field.name, data)
-            raise ValidationError(msg, self._get_http_code(400))
- 
-    def _is_valid_utd_email(self, field):
-        data = self._get_data(field)
-        if re.match(r'.*@utdallas.edu', data) is None:
-            msg = 'UTD {0}: {1} is in invalid format.'.format(field.name, data)
             raise ValidationError(msg, self._get_http_code(400))
 
     def _is_valid_privacy(self, field):
@@ -199,22 +205,6 @@ class RequestValidation(object):
             msg = '{0}: {1} is not in ISO 8601 format.'.format(field.name, data)
             raise ValidationError(msg, self._get_http_code(400))
 
-
-    def _does_event_exist(self, field):
-        data = self._get_data(field)
-        try:
-            models.Event.objects.get(id=data)
-        except:
-            msg = 'funed {0}: {1} does not exist.'.format(field.name, data)
-            raise ValidationError(msg, self._get_http_code(400))
-
-    def _does_rsvp_exist(self, field):
-        data = self._get_data(field)
-        try:
-            models.Rsvp.objects.get(id=data)
-        except:
-            msg = 'funed {0}: {1} does not exist.'.format(field.name, data)
-            raise ValidationError(msg, self._get_http_code(400))
 
     ######## Auth and User Validation ########
 
@@ -243,13 +233,8 @@ class RequestValidation(object):
 
     ######## RBAC Validation ########
 
-    def _is_organization_admin(self, field):
-        user = self.user # current User
-        organization_id = self._get_data(field)
-        is_organization_admin = self.rbac.is_organization_admin(user, organization_id)
-        if not is_organization_admin:
-            msg = 'Forbidden. You are not an admin of the organization.'
-            raise ValidationError(msg, self._get_http_code(403))
+    def _is_admin(self, field):
+        pass
 
 
     ######## Search Validation ########
