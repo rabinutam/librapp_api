@@ -46,7 +46,7 @@ class BookLoan(models.Model):
     book = models.ForeignKey(BookCopy)
     card_no = models.ForeignKey(Borrower)
     date_out = models.DateTimeField(auto_now_add=True)
-    due_date = models.DateTimeField(null=True)
+    due_date = models.DateTimeField() # 14 days from date_out
     date_in = models.DateTimeField(null=True)
 
 class Fine(models.Model):

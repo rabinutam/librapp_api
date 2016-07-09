@@ -11,12 +11,12 @@ from librapp.lib.views_helper import ViewsHelper
 from librapp.utils.date_utils import DateUtils
 
 
-class BooksLoansViewSet(viewsets.ViewSet):
-    '''API Endpoint to access book loans
+class FinesViewSet(viewsets.ViewSet):
+    '''API Endpoint to access book fines
 
     **API Endpoint**
     ::
-        http://foo.com/books/loans/
+        http://foo.com/books/fines/
 
     **Methods:**
         - retrieve
@@ -39,11 +39,11 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
 
     def list(self, request):
-        '''Responses with a list of book loans
+        '''Responses with a list of book fines
 
         **Usage**
         ::
-            GET http://foo.com/books/loans/
+            GET http://foo.com/books/fines/
 
         **Query Parameters**
 
@@ -52,13 +52,12 @@ class BooksLoansViewSet(viewsets.ViewSet):
         ================== =========== ========== =============================
         card_no            integer     No         borrower card_no
         lib_branch_id      integer     No         library branch id
-        active             bool        No         true: get active loans only
-        overdue            bool        No         true: get overdue loans only (subset of active)
+        fine_type          string      No         Options: paid, unpaid, both (default)
         ================== =========== ========== =============================
 
         **Sample Request**
         ::
-            GET http://foo.com/books/loans/?card_no=1
+            GET http://foo.com/books/fines/?card_no=1
 
         **Sample Response**
         ::
@@ -68,7 +67,7 @@ class BooksLoansViewSet(viewsets.ViewSet):
         fields = [
                 RequestField(name='card_no', required=False, query_param=True, types=(int, str, unicode), checks=[]),
                 RequestField(name='lib_branch_id', required=False, query_param=True, types=(int,), checks=[]),
-                RequestField(name='active', required=False, query_param=True, types=(bool,), checks=[]),
+                RequestField(name='fine_type', required=False, query_param=True, types=(str, unicode), checks=[]),
                 ]
         checks = []
 
@@ -79,31 +78,22 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
         try:
             loan_filter = {}
-
             card_no = request.query_params.get('card_no')
             if card_no is not None:
                 loan_filter['card_no'] = int(card_no)
 
-            active = request.query_params.get('active', '')
-            if active.lower() in ['true', '1']:
-                loan_filter['date_in'] = None
-
-            overdue = request.query_params.get('overdue', '')
-            if overdue.lower() in ['true', '1']:
-                loan_filter['date_in'] = None
-                loan_filter['due_date__lt'] = datetime.now()
-
             b_loans = models.BookLoan.objects.filter(**loan_filter)
 
             lib_branch_id = request.query_params.get('lib_branch_id')
+            fine_type = request.query_params.get('fine_type', 'both')
             result = []
             for loan in b_loans:
                 if lib_branch_id is not None:
                     lib_branch_id = int(lib_branch_id)
                     if lib_branch_id == loan.book.lib_branch.id:
-                        result.append(self.vh.get_loan_data(loan))
+                        result.append(self.vh.get_loan_data(loan, fine_type=fine_type))
                 else:
-                    result.append(self.vh.get_loan_data(loan))
+                    result.append(self.vh.get_loan_data(loan, fine_type=fine_type))
             return Response(result)
         except:
             msg = 'Error getting book loan data for card_no: {0}.'.format(card_no)
@@ -120,7 +110,7 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
         **Usage**
         ::
-            POST http://foo.com/books/checking/
+            POST http://foo.com/books/fines/
 
         **Request body**
 
@@ -207,17 +197,18 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
 
     def update(self, request, pk=None):
-        '''Updates book loan from checkout to checkin for the book loan ID
+        '''Updates book loan fine
 
         **Usage**
         ::
-            PUT http://foo.com/books/checking/<book loan ID>/
+            PUT http://foo.com/books/fines/<book loan ID>/
 
         **Request body**
 
         ================== =========== ========== =============================
         name               Type        Required   Description
         ================== =========== ========== =============================
+        paid_amt           float       Yes        Amt paid towards fine
         ================== =========== ========== =============================
 
         **Sample Request**

@@ -14,6 +14,23 @@ class ViewsHelper(object):
                 'date_in': loan.date_in,
                 'due_date': loan.due_date,
                 }
+
+        # TODO should not update db with GET, temp soln
+        # If overdue, Update Fines
+        now = datetime.datetime.now()
+        if loan.due_date < now:
+            timediff = now - loan.due_date
+            daily_fine = 0.25 # $0.25/day
+            fine_amt = timediff.days * daily_fine
+            fine_row = {'loan_id': loan.id}
+            try:
+                fine_obj = models.Fine.object.get(**fine_row)
+                fine_obj.fine_amt = fine_amt
+                fine_obj.save()
+            except:
+                fine_row['fine_amt'] = fine_amt
+                models.Fine.object.create(**fine_row)
+
         try:
             fine_filter = {'loan_id': loan.id}
             if fine_type.lower() == 'paid':
