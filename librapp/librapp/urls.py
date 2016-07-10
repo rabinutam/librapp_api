@@ -19,14 +19,16 @@ from django.conf.urls import include, url
 from django.contrib import admin
 from rest_framework import routers
 
-from views import search
+from views import search, borrowers
 from views.auth import login
-from views.books import loans
+from views.books import loans, fines
 
 router = routers.DefaultRouter()
 router.register(r'auth/login', login.LoginViewSet, base_name='login')
 router.register(r'search', search.SearchViewSet, base_name='search')
+router.register(r'borrowers', borrowers.BorrowersViewSet, base_name='borrowers')
 router.register(r'books/loans', loans.BooksLoansViewSet, base_name='books_loans')
+router.register(r'books/fines', fines.FinesViewSet, base_name='fines')
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),

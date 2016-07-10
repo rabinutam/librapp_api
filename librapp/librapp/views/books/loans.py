@@ -52,7 +52,8 @@ class BooksLoansViewSet(viewsets.ViewSet):
         ================== =========== ========== =============================
         card_no            integer     No         borrower card_no
         lib_branch_id      integer     No         library branch id
-        active             bool        No         true for active loan only
+        active             bool        No         true: get active loans only
+        overdue            bool        No         true: get overdue loans only (subset of active)
         ================== =========== ========== =============================
 
         **Sample Request**
@@ -87,49 +88,46 @@ class BooksLoansViewSet(viewsets.ViewSet):
             if active.lower() in ['true', '1']:
                 loan_filter['date_in'] = None
 
+            overdue = request.query_params.get('overdue', '')
+            if overdue.lower() in ['true', '1']:
+                loan_filter['date_in'] = None
+                loan_filter['due_date__lt'] = datetime.now()
+
             b_loans = models.BookLoan.objects.filter(**loan_filter)
 
             lib_branch_id = request.query_params.get('lib_branch_id')
             result = []
             for loan in b_loans:
+                append = False
                 if lib_branch_id is not None:
                     lib_branch_id = int(lib_branch_id)
                     if lib_branch_id == loan.book.lib_branch.id:
-                        result.append(self._get_book_loan_data(loan))
+                        append = True
                 else:
-                    result.append(self._get_book_loan_data(loan))
-            return Response(result)
+                    append = True
+                if append:
+                    loan_data = self.vh.get_loan_data(loan)
+                    result.append(loan_data)
+            return Response({'books_loans': result})
         except:
-            raise
             msg = 'Error getting book loan data for card_no: {0}.'.format(card_no)
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
 
-    @staticmethod
-    def _get_book_loan_data(loan):
-        book_copy = loan.book
-        loan_dict = {
-                'isbn': book_copy.isbn.isbn,
-                'lib_branch_id': book_copy.lib_branch.id,
-                'card_no': loan.card_no,
-                'date_out': loan.date_out,
-                'date_in': loan.date_in,
-                'due_date': loan.due_date,
-                }
-        return loan_dict
-
-
     def retrieve(self, request, pk=None):
+        '''Method Not Allowed
+        '''
+
         msg = 'Method Not Allowed'
         return Response({'msg': msg}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
     def create(self, request):
-        '''Creates a Book check in entry
+        '''Creates a Book check out entry, ie checkout book
 
         **Usage**
         ::
-            POST http://foo.com/books/checking/
+            POST http://foo.com/books/loans/
 
         **Request body**
 
@@ -155,9 +153,9 @@ class BooksLoansViewSet(viewsets.ViewSet):
         '''
 
         fields = [
-                RequestField(name='lib_branch_id', required=True, types=(int), checks=[]),
+                RequestField(name='lib_branch_id', required=True, types=(int,), checks=[]),
                 RequestField(name='isbn', required=True, types=(str, unicode), checks=[]),
-                RequestField(name='card_no', required=True, types=(int), checks=[]),
+                RequestField(name='card_no', required=True, types=(int,), checks=[]),
                 ]
         checks = []
 
@@ -172,14 +170,23 @@ class BooksLoansViewSet(viewsets.ViewSet):
             isbn = request.data.get('isbn')
             card_no = request.data.get('card_no')
 
+            # book copy in that library
             book_copy = models.BookCopy.objects.get(isbn=isbn, lib_branch_id=lib_branch_id)
 
-            # Active loan count, ie no date_in set yet
-            b_loans = models.BookLoan.objects.filter(card_no=card_no, date_in=None)
-            loan_count = b_loans.count()
+            # Check if active loan for the book_copy (book in the library) already exists
+            try:
+                existing_loan = models.BookLoan.objects.get(card_no=card_no, book_id=book_copy.id)
+                if existing_loan.date_in is None:
+                    msg = 'Cannot loan the same book twice'
+                    return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
+            except models.BookLoan.DoesNotExist:
+                pass
+            except:
+                raise
 
+            b_loans = models.BookLoan.objects.filter(card_no=card_no)
             # Check fine
-            if loan_count:
+            if b_loans:
                 for loan in b_loans:
                     try:
                         fine = models.Fine.objects.get(loan_id=loan.id)
@@ -190,6 +197,8 @@ class BooksLoansViewSet(viewsets.ViewSet):
                         pass # no problem
 
             # Check borrow limit (max 3 books)
+            # Active loan count, ie no date_in set yet
+            loan_count = models.BookLoan.objects.filter(card_no=card_no, date_in=None).count()
             if loan_count >= 3:
                 msg = 'Cannot borrow more that 3 books at a time'
                 return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
@@ -201,8 +210,8 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
             # create a new record in book loan table
             book_loan_row = {
-                    'book': book_copy.id,
-                    'card_no': card_no,
+                    'book_id': book_copy.id,
+                    'card_no_id': card_no,
                     'due_date': datetime.now() + timedelta(14)
                     }
             book_loan_obj = models.BookLoan.objects.create(**book_loan_row)
@@ -210,7 +219,13 @@ class BooksLoansViewSet(viewsets.ViewSet):
             # update available copies
             book_copy.no_of_copies -= 1
             book_copy.save()
-            return Response(book_loan_obj.values())
+            response_data = {
+                    'id': book_loan_obj.id,
+                    'book_copy_id': book_loan_obj.book_id,
+                    'card_no': book_loan_obj.card_no.card_no,
+                    'isbn': book_loan_obj.book.isbn.isbn,
+                    }
+            return Response(response_data)
         except:
             msg = 'Could not create Loan Entry'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
@@ -221,7 +236,7 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
         **Usage**
         ::
-            PUT http://foo.com/books/checking/<book loan ID>/
+            PUT http://foo.com/books/loans/<book loan ID>/
 
         **Request body**
 
@@ -232,8 +247,7 @@ class BooksLoansViewSet(viewsets.ViewSet):
 
         **Sample Request**
         ::
-            {
-            }
+            {}
 
         **Sample Response**
         ::
@@ -246,23 +260,34 @@ class BooksLoansViewSet(viewsets.ViewSet):
         checks = []
 
         try:
-            vres = RequestValidation(request=request, checks=checks, fields=fields)
+            vres = RequestValidation(request=request, checks=checks, fields=fields, pk=pk)
         except ValidationError as e:
             return Response({'msg': e.message}, status=e.status)
 
         try:
-            b_loan = models.BookLoan.objects.get(id=pk)
+            book_loan_obj = models.BookLoan.objects.get(id=pk)
+
+            # Check: no check in twice
+            if book_loan_obj.date_in is not None:
+                msg = 'Book is already checked in.'
+                return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)
 
             # Available copies increases by 1 upon checkin
-            book_copy = b_loan.book
+            book_copy = book_loan_obj.book
             book_copy.no_of_copies += 1
             book_copy.save()
 
             # Save date in
-            b_loan.date_in = datetime.now()
-            b_loan.save()
+            book_loan_obj.date_in = datetime.now()
+            book_loan_obj.save()
 
-            return Response(b_loan.values())
+            response_data = {
+                    'id': book_loan_obj.id,
+                    'book_copy_id': book_loan_obj.book_id,
+                    'card_no': book_loan_obj.card_no.card_no,
+                    'isbn': book_loan_obj.book.isbn.isbn,
+                    }
+            return Response(response_data)
         except:
             msg = 'Could not update Loan Entry'
             return Response({'msg': msg}, status=status.HTTP_400_BAD_REQUEST)

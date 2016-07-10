@@ -32,25 +32,28 @@ class BookCopy(models.Model):
     no_of_copies = models.IntegerField(default=0)
 
 class Borrower(models.Model):
-    #card_no = models.AutoField(primary_key=True)
-    card_no = models.IntegerField(primary_key=True)
-    ssn = models.CharField(max_length=9)
+    card_no = models.AutoField(primary_key=True)
+    ssn = models.CharField(max_length=9, unique=True)
     fname = models.CharField(max_length=50)
     lname = models.CharField(max_length=50)
     address = models.CharField(max_length=100)
-    phone = models.CharField(max_length=15)
-    email = models.EmailField(max_length=100)
+    phone = models.CharField(max_length=15, null=True)
+    email = models.EmailField(max_length=100, null=True)
 
 class BookLoan(models.Model):
     # id = loan_id is assigned by default
     book = models.ForeignKey(BookCopy)
     card_no = models.ForeignKey(Borrower)
     date_out = models.DateTimeField(auto_now_add=True)
-    due_date = models.DateTimeField(null=True)
+    due_date = models.DateTimeField() # 14 days from date_out
     date_in = models.DateTimeField(null=True)
+
+    class Meta:
+        # one borrower can borrow that book only once
+        unique_together = ('book', 'card_no')
 
 class Fine(models.Model):
     # id is assigned by default
-    loan = models.ForeignKey(BookLoan)
+    loan = models.OneToOneField(BookLoan, unique=True) # same as ForeignKey, unique=True
     fine_amt = models.DecimalField(max_digits=6, decimal_places=2)
     paid = models.BooleanField(default=False)
