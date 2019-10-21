@@ -22,7 +22,7 @@ configobj==4.7.2
 decorator==4.0.6
 django-cors-headers==1.1.0
 django-docs==0.1.2
-djangorestframework==3.3.2
+djangorestframework==3.9.1
 docutils==0.12
 html5lib==0.999
 ipython==4.0.2
