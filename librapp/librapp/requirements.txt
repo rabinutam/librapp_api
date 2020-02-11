@@ -1,6 +1,6 @@
 Babel==2.2.0
 Cheetah==2.4.4
-Django==1.9.1
+Django==1.11.28
 Jinja2==2.8
 Landscape-Client==14.12
 MarkupSafe==0.23
