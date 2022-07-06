@@ -24,7 +24,7 @@ django-cors-headers==1.1.0
 django-docs==0.1.2
 djangorestframework==3.3.2
 docutils==0.12
-html5lib==0.999
+html5lib==0.999999999
 ipython==4.0.2
 ipython-genutils==0.1.0
 jsonpatch==1.3
